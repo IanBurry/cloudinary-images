@@ -122,6 +122,11 @@ class Cloudinary_Images {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-cloudinary-images-public.php';
 
+		/**
+		* All long strings, such as message strings
+		*/
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/cloudinary-images-strings.php';
+
 		$this->loader = new Cloudinary_Images_Loader();
 
 	}
@@ -157,6 +162,16 @@ class Cloudinary_Images {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+		$this->loader->add_action('admin_menu', $plugin_admin, 'add_plugin_admin_menu');
+
+		$plugin_basename = plugin_basename(plugin_dir_path(__DIR__) . $this->plugin_name . '.php');
+		$this->loader->add_filter('plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links');
+
+		$this->loader->add_action('admin_init', $plugin_admin, 'options_update');
+
+		// the custom media hooks
+		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');
+		$this->loader->add_action('manage_media_custom_column', $plugin_admin, 'add_cloudinary_upload', 10, 2);
 	}
 
 	/**

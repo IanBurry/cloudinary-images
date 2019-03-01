@@ -15,7 +15,7 @@
  * @wordpress-plugin
  * Plugin Name:       Cloudinary Images
  * Plugin URI:        https://nowhere.example.com
- * Description:       This is a short description of what the plugin does. It's displayed in the WordPress admin area.
+ * Description:       Upload and serve images from Cloudinary
  * Version:           1.0.0
  * Author:            Ian Burry
  * Author URI:        https://author.example.com

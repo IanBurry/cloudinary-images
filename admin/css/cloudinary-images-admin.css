@@ -1,4 +1,19 @@
 /**
  * All of the CSS for your admin-specific functionality should be
  * included in this file.
+ *
  */
+ .cl-admin th {
+    width: 125px;
+ }
+ .cl-admin input[type=text], input[type=url] {
+    margin-left: 0.75rem;
+ }
+ .cl-admin .dashicons.dashicons-yes {
+    color: green;
+    font-size: 2rem;
+ }
+ .cl-admin .dashicons.dashicons-no {
+    color: red;
+    font-size: 2rem;
+ }
