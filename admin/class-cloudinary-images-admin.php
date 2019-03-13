@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The admin-specific functionality of the plugin.
  *
@@ -23,6 +22,7 @@
 class Cloudinary_Images_Admin {
 
 	const CLOUDINARY_URL = 'https://%s@api.cloudinary.com/v1_1/%s/%s';
+	const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/%s/%s/upload';
 	const CLOUDINARY_URL_REGEX = '/\Acloudinary:\/\/((\d{15}):(\w{27}))@(\w+)\z/';
 
 	/**
@@ -131,7 +131,6 @@ class Cloudinary_Images_Admin {
 	*
 	* @since 1.0.0
 	*/
-	// this really will just return the sanitized input
 	public function validate($input) {
 		preg_match(self::CLOUDINARY_URL_REGEX, $input['url'], $match);
 		if (!empty($match)) {
@@ -161,6 +160,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function options_update() {
+		// do validation before registering setting
 		register_setting(
 			$this->plugin_name, $this->plugin_name, array($this, 'validate')
 		);
@@ -172,7 +172,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function add_cloudinary_column($columns) {
-		$columns['cloudinary-image'] = 'Cloudinary';
+		$columns['cloudinary-image'] = 'Cloudinary Image';
 		return $columns;
 	}
 
@@ -183,9 +183,63 @@ class Cloudinary_Images_Admin {
 	*/
 	public function add_cloudinary_upload($col_name, $media_id) {
 		if($col_name == 'cloudinary-image') {
-			printf('<a href="#%u">%s</a>', $media_id, CL_UPLOAD_TITLE);
+			printf('<a href="?cloudinary_upload=%u">%s</a>', $media_id, CL_UPLOAD_TITLE);
 		}
 	}
+
+	/**
+	* Upload image file to cloudinary from wp library
+	*
+	* This will probably be off-loaded to a class cause it'll get messy here
+	* @todo Need to do some validations for file existence, permissions, etc.
+	*
+	* @since 1.0.0
+	*/
+	public function upload_to_cloudinary() {
+
+		if (isset($_GET['cloudinary_upload']) && intval($_GET['cloudinary_upload']) > 0) {
+			$img_path = get_attached_file($_GET['cloudinary_upload']);
+
+			// now get the needed bits from options
+			$options = get_option($this->plugin_name);
+			preg_match(self::CLOUDINARY_URL_REGEX, $options['url'], $matches);
+			list($url, $key_sec, $api_key, $api_secret, $cloud_name) = $matches;
+			$preset = $options['preset'];
+
+			// build cloudinary upload url
+			$upload_url = sprintf(self::CLOUDINARY_UPLOAD_URL, $cloud_name, 'image');
+
+			// build siggy part of payload
+			$sig_params = ['timestamp' => time(), 'upload_preset' => $preset];
+			$sig = sha1(http_build_query($sig_params) . $api_secret);
+
+			// add api_key, file, and sig to sig_params
+			$file = curl_file_create($img_path);
+			$post_body = array_merge(
+				$sig_params,
+				['api_key' => $api_key, 'file' => $file, 'signature' => $sig]
+			);
+
+			// ok, wp_remote_post doesn't work with files... so curl it is
+			$ch = curl_init($upload_url);
+			curl_setopt($ch, CURLOPT_POST, true);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $post_body);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+			$response = json_decode(curl_exec($ch), true);
+			error_log(var_export($response, true));
+			error_log(curl_error($ch));
+			curl_close($ch);
+
+			// redirect back to library
+			$lib_url = wp_get_referer();
+			wp_redirect($lib_url);
+		}
+	}
+
+	/**************************************************************************
+	************************** PRIVATE METHODS ********************************
+	**************************************************************************/
 
 	/**
 	* Construct Cloudinary validation url
@@ -202,7 +256,7 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Query url to Cloudinary
+	* Validate url to Cloudinary
 	*
 	* @since 1.0.0
 	* @param String $check_url The validation URL
@@ -214,7 +268,25 @@ class Cloudinary_Images_Admin {
 		if (is_array($response)) {
 			$is_valid = intval($response['headers']['status']) === 200;
 		}
-		error_log($response['headers']['status']);
+		if (WP_DEBUG_LOG) error_log($response['headers']['status']);
 		return $is_valid;
+	}
+
+	/**
+	* Verify upload auth and check media ID
+	*
+	* Checks user permissions and check existence of upload media ID
+	*
+	* @since 1.0.0
+	*/
+	private function cl_can_upload() {
+		error_log('cl_can_upload');
+		// needs to check thoroughly so as not to cause endless redirect loop
+		$sendback = wp_get_referer();
+		error_log($sendback);
+		$location = add_query_arg(array('upload_errors' => 'Upload failed'), $sendback);
+		error_log($location);
+		// wp_redirect($location);
+		// exit();
 	}
 }

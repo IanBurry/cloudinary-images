@@ -172,6 +172,9 @@ class Cloudinary_Images {
 		// the custom media hooks
 		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');
 		$this->loader->add_action('manage_media_custom_column', $plugin_admin, 'add_cloudinary_upload', 10, 2);
+
+		// what does this do?
+		$this->loader->add_filter('load-upload.php', $plugin_admin, 'upload_to_cloudinary');
 	}
 
 	/**

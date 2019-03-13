@@ -29,4 +29,4 @@ define(
 *
 * @since 1.0.0
 */
-define('CL_UPLOAD_TITLE', __('Upload to Cloudinary'));
+define('CL_UPLOAD_TITLE', __('Serve from Cloudinary'));

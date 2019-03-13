@@ -19,8 +19,8 @@
     <form action="options.php" method="POST" name="cl_images_options">
         <?php
             $options = get_option($this->plugin_name);
-            $cloudinary_url = $options['url'];
-            $cloudinary_preset = $options['preset'];
+            $cloudinary_url = isset($options['url']) ? $options['url'] : '';
+            $cloudinary_preset = isset($options['preset']) ? $options['preset'] : '';
 
             settings_fields($this->plugin_name);
             do_settings_sections($this->plugin_name);
@@ -45,7 +45,7 @@
                         type="url"
                         class="large-text"
                         placeholder="cloudinary://API KEY:API SECRET@CLOUD NAME"
-                        value="<?= $options['url'] ?: '' ?>">
+                        value="<?= $cloudinary_url ?: '' ?>">
                 </td>
             </tr>
             <tr>
@@ -61,7 +61,7 @@
                         type="text"
                         class="regular-text"
                         placeholder="Upload Preset Name (optional)"
-                        value="<?= $options['preset'] ?: '' ?>">
+                        value="<?= $cloudinary_preset ?: '' ?>">
                 </td>
             </tr>
         </table>
