@@ -30,3 +30,9 @@ define(
 * @since 1.0.0
 */
 define('CL_UPLOAD_TITLE', __('Serve from Cloudinary'));
+
+define('CL_RESPONSE_200', __('Upload to Cloudinary is successful.'));
+define('CL_RESPONSE_400', __('Bad Request. Check for correct plugin configuration.'));
+define('CL_RESPONSE_403', __('Request not Allowed. Check Cloudinary account.'));
+define('CL_RESPONSE_420', __('Enhance your Calm. Cloudinary has rate limited this account.'));
+define('CL_RESPONSE_500', __('Server Error. Contact Cloudinary support.'));

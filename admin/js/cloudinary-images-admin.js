@@ -1,5 +1,14 @@
+/* eslint-disable */
 (function( $ ) {
-	'use strict';
+	'use strict'
+
+	$(document).on('click', '.cl-images-upload .notice-dismiss', function() {
+		let host = location.hostname
+		let path = location.pathname
+		let protocol = location.protocol.concat('//')
+
+		location.replace(protocol.concat(host, path))
+	})
 
 	/**
 	 * All of the code for your admin-facing JavaScript source
@@ -29,4 +38,4 @@
 	 * practising this, we should strive to set a better example in our own work.
 	 */
 
-})( jQuery );
+})( jQuery )

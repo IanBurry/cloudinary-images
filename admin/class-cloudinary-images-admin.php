@@ -43,6 +43,8 @@ class Cloudinary_Images_Admin {
 	 */
 	private $version;
 
+	private $response_status = 0;
+
 	/**
 	 * Initialize the class and set its properties.
 	 *
@@ -67,7 +69,7 @@ class Cloudinary_Images_Admin {
 			$this->plugin_name,
 			plugin_dir_url( __FILE__ ) . 'css/cloudinary-images-admin.css',
 			array(),
-			'',
+			$this->version,
 			'all'
 		);
 	}
@@ -172,7 +174,10 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function add_cloudinary_column($columns) {
-		$columns['cloudinary-image'] = 'Cloudinary Image';
+		if (current_user_can('upload_files')) {
+			$columns['cloudinary-image'] = 'Cloudinary Image';
+		}
+
 		return $columns;
 	}
 
@@ -182,7 +187,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function add_cloudinary_upload($col_name, $media_id) {
-		if($col_name == 'cloudinary-image') {
+		if($col_name == 'cloudinary-image' && current_user_can('upload_files')) {
 			printf('<a href="?cloudinary_upload=%u">%s</a>', $media_id, CL_UPLOAD_TITLE);
 		}
 	}
@@ -196,7 +201,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function upload_to_cloudinary() {
-
+		add_action('admin_notices', [$this, 'upload_notice']);
 		if (isset($_GET['cloudinary_upload']) && intval($_GET['cloudinary_upload']) > 0) {
 			$img_path = get_attached_file($_GET['cloudinary_upload']);
 
@@ -228,12 +233,48 @@ class Cloudinary_Images_Admin {
 
 			$response = json_decode(curl_exec($ch), true);
 			error_log(var_export($response, true));
-			error_log(curl_error($ch));
+			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
 
 			// redirect back to library
 			$lib_url = wp_get_referer();
-			wp_redirect($lib_url);
+			$location = add_query_arg(['status' => $status], $lib_url);
+			wp_redirect($location);
+		}
+
+	}
+
+	// need to add teh status to the query string and look for it there
+	public function upload_notice() {
+		if (isset($_GET['status'])) {
+			$status = $_GET['status'];
+			$type = 'error';
+
+			switch ($status) {
+				case 400:
+				case 401:
+				case 404:
+					$message = CL_RESPONSE_400;
+					break;
+				case 403:
+					$message = CL_RESPONSE_403;
+					break;
+				case 420:
+					$message = CL_RESPONSE_420;
+					break;
+				case 500:
+					$message = CL_RESPONSE_500;
+					break;
+				default:
+					$message = CL_RESPONSE_200;
+					$type = 'updated';
+			}
+
+			printf(
+				'<div class="%s notice is-dismissible cl-images-upload"><p>%s</p></div>',
+				$type,
+				$message
+			);
 		}
 	}
 
