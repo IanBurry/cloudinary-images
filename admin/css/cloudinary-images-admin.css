@@ -3,17 +3,25 @@
  * included in this file.
  *
  */
- .cl-admin th {
+.cl-admin th {
     width: 125px;
- }
- .cl-admin input[type=text], input[type=url] {
+}
+.cl-admin input[type=text], input[type=url], input[type=checkbox] {
     margin-left: 0.75rem;
- }
- .cl-admin .dashicons.dashicons-yes {
+}
+.cl-admin .dashicons.dashicons-yes {
     color: green;
     font-size: 2rem;
- }
- .cl-admin .dashicons.dashicons-no {
+}
+.cl-admin .dashicons.dashicons-no {
     color: red;
     font-size: 2rem;
- }
+}
+@media screen and (max-width: 782px) {
+    .cl-admin input[type=url] {
+        font-size: 16px;
+        line-height: 1.5;
+        padding: 7px 10px;
+        width: 100%;
+    }
+}

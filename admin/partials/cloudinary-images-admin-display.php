@@ -21,10 +21,16 @@
             $options = get_option($this->plugin_name);
             $cloudinary_url = isset($options['url']) ? $options['url'] : '';
             $cloudinary_preset = isset($options['preset']) ? $options['preset'] : '';
+            $do_transforms = isset($options['transforms']) ? $options['transforms'] : 0;
+            $configured = isset($options['configured']) ? $options['configured'] : false;
+
+            error_log("Display:");
+            error_log(var_export($options, true));
 
             settings_fields($this->plugin_name);
             do_settings_sections($this->plugin_name);
         ?>
+        <input type="hidden" id="configured" name="configured" value="0" />
         <div>
             <?php
                 // errors can be used to determine form field highlighting
@@ -62,6 +68,20 @@
                         class="regular-text"
                         placeholder="Upload Preset Name (optional)"
                         value="<?= $cloudinary_preset ?: '' ?>">
+                </td>
+            </tr>
+            <tr>
+                <th>&nbsp;</th>
+                <td>
+                    <input
+                        id="<?= $this->plugin_name ?>-transforms"
+                        name="<?= $this->plugin_name ?>[transforms]"
+                        type="checkbox"
+                        value="1"
+                        <?php echo $configured ? '' : 'checked' ?>>
+                    <label for="<?= $this->plugin_name ?>-transforms">
+                        <strong>Build/Update Transformations</strong>
+                    </label>
                 </td>
             </tr>
         </table>

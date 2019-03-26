@@ -173,8 +173,11 @@ class Cloudinary_Images {
 		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');
 		$this->loader->add_action('manage_media_custom_column', $plugin_admin, 'add_cloudinary_upload', 10, 2);
 
-		// what does this do?
+		// uploading image and reregistering with wp
 		$this->loader->add_filter('load-upload.php', $plugin_admin, 'upload_to_cloudinary');
+
+		// hook into wp_get_attachment_image_src for fun and learning
+		$this->loader->add_filter('wp_get_attachment_image_src', $plugin_admin, 'get_cl_image_info', 10, 4);
 	}
 
 	/**

@@ -21,6 +21,9 @@
  */
 class Cloudinary_Images_Admin {
 
+	/**
+	* @todo Tidy up const names. Maybe move them into strings file
+	*/
 	const CLOUDINARY_URL = 'https://%s@api.cloudinary.com/v1_1/%s/%s';
 	const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/%s/%s/upload';
 	const CLOUDINARY_URL_REGEX = '/\Acloudinary:\/\/((\d{15}):(\w{27}))@(\w+)\z/';
@@ -43,6 +46,24 @@ class Cloudinary_Images_Admin {
 	 */
 	private $version;
 
+	/**
+	* The Cloudinary account info
+	*
+	* @since 1.0.0
+	* @access private
+	* @var array $cl_config
+	*/
+	private $cl_config = [
+		'full_url' => '',
+		'key_secret' => '',
+		'api_key' => '',
+		'secret' => '',
+		'cloud_name' => ''
+	];
+
+	/**
+	* @todo Is this needed? Can we zap it?
+	*/
 	private $response_status = 0;
 
 	/**
@@ -57,6 +78,13 @@ class Cloudinary_Images_Admin {
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
 
+		$options = get_option($this->plugin_name);
+		if ($options['configured']) {
+			preg_match(self::CLOUDINARY_URL_REGEX, $options['url'], $matches);
+			$this->cl_config = array_combine(
+				array_keys($this->cl_config), $matches
+			);
+		}
 	}
 
 	/**
@@ -131,29 +159,37 @@ class Cloudinary_Images_Admin {
 	/**
 	* validate form fields
 	*
+	* @todo Restructure this so that no preset error is added if there is a
+	* preceding url error. That is, don't check preset if the url is already
+	* known to be bad
+	*
 	* @since 1.0.0
 	*/
 	public function validate($input) {
 		preg_match(self::CLOUDINARY_URL_REGEX, $input['url'], $match);
 		if (!empty($match)) {
-			$url_check = $this->cl_url($match[1], end($match), 'resources');
+			$url_check = $this->cl_admin_url($match[1], end($match), 'resources');
 			if (!$this->cl_check($url_check)) {
-				add_settings_error('url', 'url_error', INVALID_CL_URL_MSG);
+				add_settings_error($this->plugin_name, 'url_error', INVALID_CL_URL_MSG);
 			}
 
 			$preset_path = "upload_presets/{$input['preset']}";
-			$preset_check = $this->cl_url($match[1], end($match), $preset_path);
+			$preset_check = $this->cl_admin_url($match[1], end($match), $preset_path);
 			if (!$this->cl_check($preset_check)) {
-				add_settings_error('preset', 'preset_error', INVALID_CL_PRESET_MSG);
+				add_settings_error($this->plugin_name, 'preset_error', INVALID_CL_PRESET_MSG);
 			}
 		} else {
-			add_settings_error('url', 'url_error', INVALID_CL_URL_MSG);
+			add_settings_error($this->plugin_name, 'url_error', INVALID_CL_URL_MSG);
 		}
 
-		return [
+		$valid = [
+			'configured' => empty(get_settings_errors($this->plugin_name)),
 			'url' => esc_url_raw($input['url'], ['cloudinary']),
-			'preset' => sanitize_text_field($input['preset'])
+			'preset' => sanitize_text_field($input['preset']),
+			'transforms' => empty($input['transforms']) ? 0 : 1
 		];
+
+		return $valid;
 	}
 
 	/**
@@ -162,10 +198,44 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function options_update() {
-		// do validation before registering setting
-		register_setting(
-			$this->plugin_name, $this->plugin_name, array($this, 'validate')
-		);
+		if (isset($_POST['option_page']) && $_POST['option_page'] == 'cloudinary-images') {
+
+			register_setting(
+				$this->plugin_name, $this->plugin_name, array($this, 'validate')
+			);
+
+			$options = get_option($this->plugin_name);
+			// we don't really want the option anyway, so use the checkbox value
+			// from the POST. This works correctly
+			if ($_POST[$this->plugin_name]['transforms']) {
+				$sizes = $this->get_all_image_sizes();
+
+				foreach ($sizes as $name => $size) {
+					if ($size['width'] > 0 || $size['height'] > 0) {
+						$width = "w_{$size['width']}";
+						$height = "h_{$size['height']}";
+						$trans = sprintf('transformations/%s?transformation=%s,%s', $name, $width, $height);
+						$url = $this->cl_admin_url(null, null, $trans);
+
+						$method = 'POST';
+						$check_result = wp_remote_get($this->cl_admin_url(null, null, "transformations/$name"));
+						if ($check_result['response']['code'] === 200) {
+							$method = 'PUT';
+						}
+
+						$result = wp_remote_post($url, ['method' => $method]);
+
+						if ($result['response'] === 200) {
+							error_log("Transformation updated");
+						}
+						error_log("And so on...");
+					}
+				}
+
+				// $options['transforms'] = 0;
+				// $fred = update_option($this->plugin_name, $options, true);
+			}
+		}
 	}
 
 	/**
@@ -201,6 +271,10 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function upload_to_cloudinary() {
+
+		global $_wp_additional_image_sizes;
+
+
 		add_action('admin_notices', [$this, 'upload_notice']);
 		if (isset($_GET['cloudinary_upload']) && intval($_GET['cloudinary_upload']) > 0) {
 			$img_path = get_attached_file($_GET['cloudinary_upload']);
@@ -232,9 +306,14 @@ class Cloudinary_Images_Admin {
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 			$response = json_decode(curl_exec($ch), true);
-			error_log(var_export($response, true));
+			// error_log(var_export($response, true));
 			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
+
+			// update image (attachment) info
+			if ($status === 200) {
+				$this->update_image($_GET['cloudinary_upload'], $response);
+			}
 
 			// redirect back to library
 			$lib_url = wp_get_referer();
@@ -244,7 +323,11 @@ class Cloudinary_Images_Admin {
 
 	}
 
-	// need to add teh status to the query string and look for it there
+	/**
+	* Handle upload success and error notifications
+	*
+	* @since 1.0.0
+	*/
 	public function upload_notice() {
 		if (isset($_GET['status'])) {
 			$status = $_GET['status'];
@@ -278,22 +361,95 @@ class Cloudinary_Images_Admin {
 		}
 	}
 
+	/**
+	* Return cloudinary url if image is served from cloudinary
+	*
+	* @param array 			$image 	   		Array of image data: url, width, height
+	* @param integer 		$attachment_id 	Integer image attachment ID
+	* @param string/array 	$size 	    	Dimension array, or string ('large', 'thumbnail', ...)
+	*/
+	public function get_cl_image_info($image, $attachment_id, $size, $icon) {
+		if (is_string($size) && !empty($image)) {
+			$meta = wp_get_attachment_metadata($attachment_id);
+			// error_log(var_export($meta, true));
+			if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] === true) {
+				$image[0] = sprintf(
+					CL_IMAGE_SRC_URL,
+					'dipuqn6zk', // this will be in config at some point
+					sprintf('w_%u,h_%u', $image[1], $image[2]),
+					$meta[CL_IMG_VERSION],
+					$meta[CL_IMG_PUB_ID],
+					$meta[CL_IMG_FORMAT]
+				);
+			}
+		}
+
+		return empty($image) ? false : $image;
+	}
+
+// https://res.cloudinary.com/dipuqn6zk/image/upload/w_200,h_200/v1553030637/blognog/sandiego.jpg
 	/**************************************************************************
 	************************** PRIVATE METHODS ********************************
 	**************************************************************************/
 
 	/**
+	* Add cloudinary data to image meta-data
+	*
+	* Add served-by-cloudinary flag and cloudinary path data to image meta-data
+	*
+	* @param integer 	$image_id 		Integer ID for uploaded image attachment
+	* @param array 		$cl_response 	Upload response data from cloudinary
+	* @return ? 0 or error code ?
+	*
+	* @todo Figure out return value and error handling for it
+	*
+	* @since 1.0.0
+	*/
+	private function update_image($image_id, $cl_response) {
+		// first get meta data
+		$meta = wp_get_attachment_metadata($image_id, true);
+
+		// add uploaded flag
+		if (!is_array($meta) || empty($meta)) {
+			// what to do? Perhaps return some error indicator?
+			//
+		}
+
+		$meta[CL_SERVED] = true;
+		$meta[CL_IMG_VERSION] = $cl_response['version'];
+		$meta[CL_IMG_PUB_ID] = $cl_response['public_id'];
+		$meta[CL_IMG_FORMAT] = $cl_response['format'];
+
+
+		// update meta data
+		$result = wp_update_attachment_metadata($image_id, $meta);
+		if ($result === false) {
+			// do something to notify
+
+		}
+		// all done
+		return 0; // or some error code?
+	}
+
+	/**
 	* Construct Cloudinary validation url
+	*
+	* Builds Cloudinary admin url from given args, or from cl_config if
+	* any args are empty
 	*
 	* @since 1.0.0
 	*
-	* @param String $key API key/secret
-	* @param String $name Cloudinary cloud name
-	* @param String $path path to be validated
+	* @param String $key Optional. API key/secret
+	* @param String $name Optional. Cloudinary cloud name
+	* @param String $path Optional path to be validated
 	* @return String URL representation
 	*/
-	private function cl_url($key, $name, $path) {
-		return sprintf(self::CLOUDINARY_URL, $key, $name, $path);
+	private function cl_admin_url($key_secret = '', $name = '', $path = '') {
+		if (empty($key_secret) || empty($name)) {
+			$key_secret = $this->cl_config['key_secret'];
+			$name = $this->cl_config['cloud_name'];
+		}
+		return sprintf(self::CLOUDINARY_URL, $key_secret, $name, $path);
 	}
 
 	/**
@@ -314,20 +470,25 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Verify upload auth and check media ID
+	* Get array of all image sizes with dimensions
 	*
-	* Checks user permissions and check existence of upload media ID
+	* Return an array of all registered images sizes along with their
+	* dimensions. Adapted from:
+	* @link https://gist.github.com/eduardozulian/6467854
 	*
 	* @since 1.0.0
+	* @return array Array of ALL image sizes with dimensions
 	*/
-	private function cl_can_upload() {
-		error_log('cl_can_upload');
-		// needs to check thoroughly so as not to cause endless redirect loop
-		$sendback = wp_get_referer();
-		error_log($sendback);
-		$location = add_query_arg(array('upload_errors' => 'Upload failed'), $sendback);
-		error_log($location);
-		// wp_redirect($location);
-		// exit();
+	private function get_all_image_sizes() {
+		$base_sizes = ['thumbnail', 'medium', 'large'];
+
+		$sizes = [];
+		foreach($base_sizes as $size) {
+			$sizes[$size]['width'] = intval(get_option("{$size}_size_w"));
+			$sizes[$size]['height'] = intval(get_option("{$size}_size_h"));
+			$sizes[$size]['crop'] = get_option("{$size}_crop") ?: false;
+		}
+
+		return array_merge($sizes, wp_get_additional_image_sizes());
 	}
 }
