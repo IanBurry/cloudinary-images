@@ -1,4 +1,6 @@
 <?php
+namespace CloudinaryImages;
+
 /**
  * The admin-specific functionality of the plugin.
  *
@@ -20,9 +22,11 @@
  * @author     Ian Burry <iburry@aol.com>
  */
 class Cloudinary_Images_Admin {
+	use Cloudinary_Images_Util;
 
 	/**
 	* @todo Tidy up const names. Maybe move them into strings file
+	* @deprecated
 	*/
 	const CLOUDINARY_URL = 'https://%s@api.cloudinary.com/v1_1/%s/%s';
 	const CLOUDINARY_UPLOAD_URL = 'https://api.cloudinary.com/v1_1/%s/%s/upload';
@@ -53,13 +57,13 @@ class Cloudinary_Images_Admin {
 	* @access private
 	* @var array $cl_config
 	*/
-	private $cl_config = [
-		'full_url' => '',
-		'key_secret' => '',
-		'api_key' => '',
-		'secret' => '',
-		'cloud_name' => ''
-	];
+	// private $cl_config = [
+	// 	'full_url' => '',
+	// 	'key_secret' => '',
+	// 	'api_key' => '',
+	// 	'secret' => '',
+	// 	'cloud_name' => ''
+	// ];
 
 	/**
 	* @todo Is this needed? Can we zap it?
@@ -78,13 +82,7 @@ class Cloudinary_Images_Admin {
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
 
-		$options = get_option($this->plugin_name);
-		if ($options['configured']) {
-			preg_match(self::CLOUDINARY_URL_REGEX, $options['url'], $matches);
-			$this->cl_config = array_combine(
-				array_keys($this->cl_config), $matches
-			);
-		}
+		// $this->setup_cl_config();
 	}
 
 	/**
@@ -157,7 +155,11 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* validate form fields
+	* Validate settings and create/update transformations
+	*
+	* Validate settings from form submission. On valid settings
+	* create/update image transformations depending on the selected option
+	* return validated and sanitized settings values
 	*
 	* @todo Restructure this so that no preset error is added if there is a
 	* preceding url error. That is, don't check preset if the url is already
@@ -165,8 +167,8 @@ class Cloudinary_Images_Admin {
 	*
 	* @since 1.0.0
 	*/
-	public function validate($input) {
-		preg_match(self::CLOUDINARY_URL_REGEX, $input['url'], $match);
+	public function process_settings($input) {
+		preg_match(CLOUDINARY_URL_REGEX, $input['url'], $match);
 		if (!empty($match)) {
 			$url_check = $this->cl_admin_url($match[1], end($match), 'resources');
 			if (!$this->cl_check($url_check)) {
@@ -182,11 +184,21 @@ class Cloudinary_Images_Admin {
 			add_settings_error($this->plugin_name, 'url_error', INVALID_CL_URL_MSG);
 		}
 
+		if (isset($input['transforms']) && empty(get_settings_errors($this->plugin_name))) {
+			$errors = Cloudinary_Images_Transformations::setup_transformations();
+			foreach ($errors as $error) {
+				add_settings_error(
+					$this->plugin_name,
+					'transformation_error',
+					sprintf('%u: %s', key($error), current($error))
+				);
+			}
+		}
+
 		$valid = [
 			'configured' => empty(get_settings_errors($this->plugin_name)),
 			'url' => esc_url_raw($input['url'], ['cloudinary']),
 			'preset' => sanitize_text_field($input['preset']),
-			'transforms' => empty($input['transforms']) ? 0 : 1
 		];
 
 		return $valid;
@@ -198,44 +210,9 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function options_update() {
-		if (isset($_POST['option_page']) && $_POST['option_page'] == 'cloudinary-images') {
-
-			register_setting(
-				$this->plugin_name, $this->plugin_name, array($this, 'validate')
-			);
-
-			$options = get_option($this->plugin_name);
-			// we don't really want the option anyway, so use the checkbox value
-			// from the POST. This works correctly
-			if ($_POST[$this->plugin_name]['transforms']) {
-				$sizes = $this->get_all_image_sizes();
-
-				foreach ($sizes as $name => $size) {
-					if ($size['width'] > 0 || $size['height'] > 0) {
-						$width = "w_{$size['width']}";
-						$height = "h_{$size['height']}";
-						$trans = sprintf('transformations/%s?transformation=%s,%s', $name, $width, $height);
-						$url = $this->cl_admin_url(null, null, $trans);
-
-						$method = 'POST';
-						$check_result = wp_remote_get($this->cl_admin_url(null, null, "transformations/$name"));
-						if ($check_result['response']['code'] === 200) {
-							$method = 'PUT';
-						}
-
-						$result = wp_remote_post($url, ['method' => $method]);
-
-						if ($result['response'] === 200) {
-							error_log("Transformation updated");
-						}
-						error_log("And so on...");
-					}
-				}
-
-				// $options['transforms'] = 0;
-				// $fred = update_option($this->plugin_name, $options, true);
-			}
-		}
+		register_setting(
+			$this->plugin_name, $this->plugin_name, array($this, 'process_settings')
+		);
 	}
 
 	/**
@@ -271,11 +248,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function upload_to_cloudinary() {
-
-		global $_wp_additional_image_sizes;
-
-
-		add_action('admin_notices', [$this, 'upload_notice']);
+		add_action('admin_notices', [$this, 'error_notice']);
 		if (isset($_GET['cloudinary_upload']) && intval($_GET['cloudinary_upload']) > 0) {
 			$img_path = get_attached_file($_GET['cloudinary_upload']);
 
@@ -299,14 +272,13 @@ class Cloudinary_Images_Admin {
 				['api_key' => $api_key, 'file' => $file, 'signature' => $sig]
 			);
 
-			// ok, wp_remote_post doesn't work with files... so curl it is
+			// Run it up the pipe
 			$ch = curl_init($upload_url);
 			curl_setopt($ch, CURLOPT_POST, true);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $post_body);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 			$response = json_decode(curl_exec($ch), true);
-			// error_log(var_export($response, true));
 			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
 
@@ -326,9 +298,13 @@ class Cloudinary_Images_Admin {
 	/**
 	* Handle upload success and error notifications
 	*
+	* @param boolean $return Return message if true, instead of printing it
+	* @param string  $prev   Text to prepend to message
+	* @param string  $post   Text to append to message
+	*
 	* @since 1.0.0
 	*/
-	public function upload_notice() {
+	public function error_notice($return = false, $pre = '', $post = '') {
 		if (isset($_GET['status'])) {
 			$status = $_GET['status'];
 			$type = 'error';
@@ -353,16 +329,21 @@ class Cloudinary_Images_Admin {
 					$type = 'updated';
 			}
 
+			if ($return) {
+				return trim("$pre $message $post");
+			}
+
 			printf(
 				'<div class="%s notice is-dismissible cl-images-upload"><p>%s</p></div>',
 				$type,
-				$message
+				trim("$pre $message $post")
 			);
 		}
 	}
 
 	/**
 	* Return cloudinary url if image is served from cloudinary
+	* @todo FINISH THIS!!!!
 	*
 	* @param array 			$image 	   		Array of image data: url, width, height
 	* @param integer 		$attachment_id 	Integer image attachment ID
@@ -387,7 +368,42 @@ class Cloudinary_Images_Admin {
 		return empty($image) ? false : $image;
 	}
 
-// https://res.cloudinary.com/dipuqn6zk/image/upload/w_200,h_200/v1553030637/blognog/sandiego.jpg
+	/**
+	* Perform actions when options are added or updated
+	*
+	* @param array $old Option values prior to update
+	* @param array $new Current option values
+	*
+	* @since 1.0.0
+	*/
+	public function setup_transforms($old, $new, $option = '') {
+		error_log('Setting up transformations');
+		if ($new['configured'] && $new['transforms']) {
+			Cloudinary_Images_Transformations::setup_transformations();
+
+
+
+
+			// if transformations have been created/updated, we allways
+			// want the transforms option to be set to false (0).
+			// There will ba a check for the result of that operation
+			$options = get_option($this->plugin_name);
+			$options['transforms'] = 0;
+			update_option($this->plugin_name, $options);
+
+
+			// go ahead and spank the default admin notice
+			// after that, additional notices may be added
+			// cool. a workaround!
+			add_settings_error(
+				$this->plugin_name,
+				'settings_updated',
+				'Settings saved. Image Transformations created.',
+				'updated'
+			);
+		}
+	}
+
 	/**************************************************************************
 	************************** PRIVATE METHODS ********************************
 	**************************************************************************/
@@ -406,7 +422,6 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	private function update_image($image_id, $cl_response) {
-		// first get meta data
 		$meta = wp_get_attachment_metadata($image_id, true);
 
 		// add uploaded flag
@@ -432,27 +447,6 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Construct Cloudinary validation url
-	*
-	* Builds Cloudinary admin url from given args, or from cl_config if
-	* any args are empty
-	*
-	* @since 1.0.0
-	*
-	* @param String $key Optional. API key/secret
-	* @param String $name Optional. Cloudinary cloud name
-	* @param String $path Optional path to be validated
-	* @return String URL representation
-	*/
-	private function cl_admin_url($key_secret = '', $name = '', $path = '') {
-		if (empty($key_secret) || empty($name)) {
-			$key_secret = $this->cl_config['key_secret'];
-			$name = $this->cl_config['cloud_name'];
-		}
-		return sprintf(self::CLOUDINARY_URL, $key_secret, $name, $path);
-	}
-
-	/**
 	* Validate url to Cloudinary
 	*
 	* @since 1.0.0
@@ -470,6 +464,21 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
+	* Setup cl_config array from options
+	*
+	* @since 1.0.0
+	*/
+	private function setup_cl_config() {
+		$options = get_option($this->plugin_name);
+		if ($options['configured']) {
+			preg_match(self::CLOUDINARY_URL_REGEX, $options['url'], $matches);
+			$this->cl_config = array_combine(
+				array_keys($this->cl_config), $matches
+			);
+		}
+	}
+
+	/**
 	* Get array of all image sizes with dimensions
 	*
 	* Return an array of all registered images sizes along with their
@@ -479,16 +488,16 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	* @return array Array of ALL image sizes with dimensions
 	*/
-	private function get_all_image_sizes() {
-		$base_sizes = ['thumbnail', 'medium', 'large'];
+	// private function get_all_image_sizes() {
+	// 	$base_sizes = ['thumbnail', 'medium', 'large'];
 
-		$sizes = [];
-		foreach($base_sizes as $size) {
-			$sizes[$size]['width'] = intval(get_option("{$size}_size_w"));
-			$sizes[$size]['height'] = intval(get_option("{$size}_size_h"));
-			$sizes[$size]['crop'] = get_option("{$size}_crop") ?: false;
-		}
+	// 	$sizes = [];
+	// 	foreach($base_sizes as $size) {
+	// 		$sizes[$size]['width'] = intval(get_option("{$size}_size_w"));
+	// 		$sizes[$size]['height'] = intval(get_option("{$size}_size_h"));
+	// 		$sizes[$size]['crop'] = get_option("{$size}_crop") ?: false;
+	// 	}
 
-		return array_merge($sizes, wp_get_additional_image_sizes());
-	}
+	// 	return array_merge($sizes, wp_get_additional_image_sizes());
+	// }
 }

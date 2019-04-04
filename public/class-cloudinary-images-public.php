@@ -1,4 +1,5 @@
 <?php
+namespace CloudinaryImages;
 
 /**
  * The public-facing functionality of the plugin.

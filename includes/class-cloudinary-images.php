@@ -27,6 +27,9 @@
  * @subpackage Cloudinary_Images/includes
  * @author     Ian Burry <iburry@aol.com>
  */
+
+namespace CloudinaryImages;
+
 class Cloudinary_Images {
 
 	/**
@@ -72,7 +75,8 @@ class Cloudinary_Images {
 		} else {
 			$this->version = '1.0.0';
 		}
-		$this->plugin_name = 'cloudinary-images';
+
+		$this->plugin_name = PLUGIN_NAME;
 
 		$this->load_dependencies();
 		$this->set_locale();
@@ -112,6 +116,11 @@ class Cloudinary_Images {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-cloudinary-images-i18n.php';
 
 		/**
+		* Plugin utility trait
+		*/
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/trait-cloudinary-images-util.php';
+
+		/**
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-cloudinary-images-admin.php';
@@ -126,6 +135,13 @@ class Cloudinary_Images {
 		* All long strings, such as message strings
 		*/
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/cloudinary-images-strings.php';
+
+		/**
+		* The class responsible for image transformation related operations
+		*/
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-cloudinary-images-transformations.php';
+
+
 
 		$this->loader = new Cloudinary_Images_Loader();
 
@@ -168,6 +184,10 @@ class Cloudinary_Images {
 		$this->loader->add_filter('plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links');
 
 		$this->loader->add_action('admin_init', $plugin_admin, 'options_update');
+
+		// check for/ setup transformatons when options are added or updated
+		// $this->loader->add_action("update_option_cloudinary-images", $plugin_admin, 'setup_transforms', 10, 3);
+		// $this->loader->add_action("add_option_cloudinary-images", $plugin_admin, 'setup_transforms', 10, 3);
 
 		// the custom media hooks
 		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');

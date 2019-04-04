@@ -1,5 +1,4 @@
 <?php
-
 /**
  * The plugin bootstrap file
  *
@@ -19,11 +18,14 @@
  * Version:           1.0.0
  * Author:            Ian Burry
  * Author URI:        https://author.example.com
+ * Requires PHP:      5.3+
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       cloudinary-images
  * Domain Path:       /languages
  */
+
+namespace CloudinaryImages;
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -35,7 +37,12 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 1.0.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'PLUGIN_NAME_VERSION', '1.0.0' );
+const PLUGIN_NAME_VERSION = '1.0.0';
+
+/**
+* Plugin Name
+*/
+const PLUGIN_NAME = 'cloudinary-images';
 
 /**
  * The code that runs during plugin activation.
@@ -55,8 +62,8 @@ function deactivate_cloudinary_images() {
 	Cloudinary_Images_Deactivator::deactivate();
 }
 
-register_activation_hook( __FILE__, 'activate_cloudinary_images' );
-register_deactivation_hook( __FILE__, 'deactivate_cloudinary_images' );
+register_activation_hook( __FILE__, __NAMESPACE__ . '\activate_cloudinary_images' );
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate_cloudinary_images' );
 
 /**
  * The core plugin class that is used to define internationalization,

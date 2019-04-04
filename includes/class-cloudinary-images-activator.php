@@ -1,4 +1,5 @@
 <?php
+namespace CloudinaryImages;
 
 /**
  * Fired during plugin activation

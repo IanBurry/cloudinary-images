@@ -13,7 +13,6 @@
  */
 ?>
 
-<!-- This file should primarily consist of HTML with a little bit of PHP. -->
 <div class="wrap cl-admin">
     <h2><?php echo esc_html(get_admin_page_title()) ?></h2>
     <form action="options.php" method="POST" name="cl_images_options">
@@ -24,13 +23,10 @@
             $do_transforms = isset($options['transforms']) ? $options['transforms'] : 0;
             $configured = isset($options['configured']) ? $options['configured'] : false;
 
-            error_log("Display:");
-            error_log(var_export($options, true));
-
             settings_fields($this->plugin_name);
             do_settings_sections($this->plugin_name);
         ?>
-        <input type="hidden" id="configured" name="configured" value="0" />
+        <input type="hidden" id="configured" name="configured" value="<?= $configured ?>" />
         <div>
             <?php
                 // errors can be used to determine form field highlighting

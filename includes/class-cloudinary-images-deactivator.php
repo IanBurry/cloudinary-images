@@ -1,4 +1,5 @@
 <?php
+namespace CloudinaryImages;
 
 /**
  * Fired during plugin deactivation
@@ -32,6 +33,7 @@ class Cloudinary_Images_Deactivator {
 	 */
 	public static function deactivate() {
         // if we are debugging...
+        error_log('Deactivating...');
         if(WP_DEBUG) {
             delete_option('cloudinary-images');
         }

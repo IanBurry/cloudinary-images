@@ -1,4 +1,5 @@
 <?php
+namespace CloudinaryImages;
 
 /**
  * Define the internationalization functionality
