@@ -184,6 +184,8 @@ class Cloudinary_Images_Admin {
 			add_settings_error($this->plugin_name, 'url_error', INVALID_CL_URL_MSG);
 		}
 
+		// Ok, no. We really, really want this to happen *after* settings have been
+		// validated and saved. So, have this run on
 		if (isset($input['transforms']) && empty(get_settings_errors($this->plugin_name))) {
 			$errors = Cloudinary_Images_Transformations::setup_transformations();
 			foreach ($errors as $error) {
@@ -378,29 +380,9 @@ class Cloudinary_Images_Admin {
 	*/
 	public function setup_transforms($old, $new, $option = '') {
 		error_log('Setting up transformations');
-		if ($new['configured'] && $new['transforms']) {
-			Cloudinary_Images_Transformations::setup_transformations();
-
-
-
-
-			// if transformations have been created/updated, we allways
-			// want the transforms option to be set to false (0).
-			// There will ba a check for the result of that operation
-			$options = get_option($this->plugin_name);
-			$options['transforms'] = 0;
-			update_option($this->plugin_name, $options);
-
-
-			// go ahead and spank the default admin notice
-			// after that, additional notices may be added
-			// cool. a workaround!
-			add_settings_error(
-				$this->plugin_name,
-				'settings_updated',
-				'Settings saved. Image Transformations created.',
-				'updated'
-			);
+		if ($new['configured']) {
+			// this will fire off when last_updated is .... updated
+			// so setup transformations, if configured (options are valid and saved)
 		}
 	}
 

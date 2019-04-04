@@ -141,8 +141,6 @@ class Cloudinary_Images {
 		*/
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-cloudinary-images-transformations.php';
 
-
-
 		$this->loader = new Cloudinary_Images_Loader();
 
 	}
