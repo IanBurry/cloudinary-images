@@ -184,8 +184,8 @@ class Cloudinary_Images {
 		$this->loader->add_action('admin_init', $plugin_admin, 'options_update');
 
 		// check for/ setup transformatons when options are added or updated
-		// $this->loader->add_action("update_option_cloudinary-images", $plugin_admin, 'setup_transforms', 10, 3);
-		// $this->loader->add_action("add_option_cloudinary-images", $plugin_admin, 'setup_transforms', 10, 3);
+		$this->loader->add_action("update_option_cloudinary-images", $plugin_admin, 'update_transforms', 10, 3);
+		$this->loader->add_action("add_option_cloudinary-images", $plugin_admin, 'add_transforms', 10, 3);
 
 		// the custom media hooks
 		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');

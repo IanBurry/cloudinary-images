@@ -131,7 +131,7 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Add action links (whatever those are)
+	* Add action links
 	*
 	* @since 1.0.0
 	*/
@@ -168,6 +168,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function process_settings($input) {
+		// error_log(var_export($input, true));
 		preg_match(CLOUDINARY_URL_REGEX, $input['url'], $match);
 		if (!empty($match)) {
 			$url_check = $this->cl_admin_url($match[1], end($match), 'resources');
@@ -184,23 +185,14 @@ class Cloudinary_Images_Admin {
 			add_settings_error($this->plugin_name, 'url_error', INVALID_CL_URL_MSG);
 		}
 
-		// Ok, no. We really, really want this to happen *after* settings have been
-		// validated and saved. So, have this run on
-		if (isset($input['transforms']) && empty(get_settings_errors($this->plugin_name))) {
-			$errors = Cloudinary_Images_Transformations::setup_transformations();
-			foreach ($errors as $error) {
-				add_settings_error(
-					$this->plugin_name,
-					'transformation_error',
-					sprintf('%u: %s', key($error), current($error))
-				);
-			}
-		}
+		// last_updated changes depending on whether 'transforms' is set
+		$last_updated = isset($input['transforms']) ? time() : $input['last_updated'];
 
 		$valid = [
 			'configured' => empty(get_settings_errors($this->plugin_name)),
 			'url' => esc_url_raw($input['url'], ['cloudinary']),
 			'preset' => sanitize_text_field($input['preset']),
+			'last_updated' => $last_updated
 		];
 
 		return $valid;
@@ -371,18 +363,52 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Perform actions when options are added or updated
+	* Add named Cloudinary image transformations
+	*
+	* When options are first created/saved, create the named image
+	* transformations that correspond to the registered Wordpress image types
+	*
+	* @param string $option Option name (cloudinary-images)
+	* @param array $values The key-value pairs
+	*
+	* @since 1.0.0
+	*/
+	public function add_transforms($option, $values) {
+		if ($values['configured']) {
+			$errors = Cloudinary_Images_Transformations::setup_transformations();
+			foreach ($errors as $error) {
+				add_settings_error(
+					$this->plugin_name,
+					'transformation_error',
+					sprintf('%u: %s', key($error), current($error))
+				);
+			}
+		}
+	}
+
+	/**
+	* Update named Cloudinary image transformations
+	*
+	* When options are updated, update named Cloudinary image transformations
 	*
 	* @param array $old Option values prior to update
 	* @param array $new Current option values
 	*
 	* @since 1.0.0
 	*/
-	public function setup_transforms($old, $new, $option = '') {
-		error_log('Setting up transformations');
-		if ($new['configured']) {
-			// this will fire off when last_updated is .... updated
-			// so setup transformations, if configured (options are valid and saved)
+	public function update_transforms($old, $new, $option = '') {
+		$do_update = intval($old['last_updated']) !== intval($new['last_updated']);
+
+		if ($new['configured'] && $do_update) {
+			error_log("Updating transformations...");
+			$errors = Cloudinary_Images_Transformations::setup_transformations();
+			foreach ($errors as $error) {
+				add_settings_error(
+					$this->plugin_name,
+					'transformation_error',
+					sprintf('%u: %s', key($error), current($error))
+				);
+			}
 		}
 	}
 
@@ -460,26 +486,4 @@ class Cloudinary_Images_Admin {
 		}
 	}
 
-	/**
-	* Get array of all image sizes with dimensions
-	*
-	* Return an array of all registered images sizes along with their
-	* dimensions. Adapted from:
-	* @link https://gist.github.com/eduardozulian/6467854
-	*
-	* @since 1.0.0
-	* @return array Array of ALL image sizes with dimensions
-	*/
-	// private function get_all_image_sizes() {
-	// 	$base_sizes = ['thumbnail', 'medium', 'large'];
-
-	// 	$sizes = [];
-	// 	foreach($base_sizes as $size) {
-	// 		$sizes[$size]['width'] = intval(get_option("{$size}_size_w"));
-	// 		$sizes[$size]['height'] = intval(get_option("{$size}_size_h"));
-	// 		$sizes[$size]['crop'] = get_option("{$size}_crop") ?: false;
-	// 	}
-
-	// 	return array_merge($sizes, wp_get_additional_image_sizes());
-	// }
 }

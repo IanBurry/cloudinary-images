@@ -22,17 +22,17 @@
             $cloudinary_preset = isset($options['preset']) ? $options['preset'] : '';
             $do_transforms = isset($options['transforms']) ? $options['transforms'] : 0;
             $configured = isset($options['configured']) ? $options['configured'] : false;
+            $last_updated = empty($options['last_updated']) ? time() : $options['last_updated'];
 
             settings_fields($this->plugin_name);
             do_settings_sections($this->plugin_name);
         ?>
-        <input type="hidden" id="configured" name="configured" value="<?= $configured ?>" />
-        <div>
-            <?php
-                // errors can be used to determine form field highlighting
-                $err = get_settings_errors();
-            ?>
-        </div>
+        <input
+            id="<?= $this->plugin_name ?>-last_updated"
+            name="<?= $this->plugin_name ?>[last_updated]"
+            type="hidden"
+            value="<?= $last_updated ?>">
+
         <table class="form-table">
             <tr>
                 <th scope="row">
