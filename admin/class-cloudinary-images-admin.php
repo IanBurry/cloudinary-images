@@ -256,7 +256,10 @@ class Cloudinary_Images_Admin {
 			$upload_url = sprintf(self::CLOUDINARY_UPLOAD_URL, $cloud_name, 'image');
 
 			// build siggy part of payload
-			$sig_params = ['timestamp' => time(), 'upload_preset' => $preset];
+			$sig_params = ['timestamp' => time()];
+			if (!empty($preset)) {
+				$sig_params['upload_preset'] = $preset;
+			}
 			$sig = sha1(http_build_query($sig_params) . $api_secret);
 
 			// add api_key, file, and sig to sig_params
@@ -275,6 +278,8 @@ class Cloudinary_Images_Admin {
 			$response = json_decode(curl_exec($ch), true);
 			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
+
+			error_log(var_export($response, true));
 
 			// update image (attachment) info
 			if ($status === 200) {
@@ -351,7 +356,8 @@ class Cloudinary_Images_Admin {
 				$image[0] = sprintf(
 					CL_IMAGE_SRC_URL,
 					'dipuqn6zk', // this will be in config at some point
-					sprintf('w_%u,h_%u', $image[1], $image[2]),
+					/* sprintf('w_%u,h_%u', $image[1], $image[2]), */
+					$size === 'full' ? '' : "t_$size",
 					$meta[CL_IMG_VERSION],
 					$meta[CL_IMG_PUB_ID],
 					$meta[CL_IMG_FORMAT]
@@ -432,17 +438,10 @@ class Cloudinary_Images_Admin {
 	private function update_image($image_id, $cl_response) {
 		$meta = wp_get_attachment_metadata($image_id, true);
 
-		// add uploaded flag
-		if (!is_array($meta) || empty($meta)) {
-			// what to do? Perhaps return some error indicator?
-			//
-		}
-
 		$meta[CL_SERVED] = true;
 		$meta[CL_IMG_VERSION] = $cl_response['version'];
 		$meta[CL_IMG_PUB_ID] = $cl_response['public_id'];
 		$meta[CL_IMG_FORMAT] = $cl_response['format'];
-
 
 		// update meta data
 		$result = wp_update_attachment_metadata($image_id, $meta);

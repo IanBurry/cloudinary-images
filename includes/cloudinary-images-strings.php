@@ -52,7 +52,7 @@ define(__NAMESPACE__ . '\CL_RESPONSE_500', __('Server Error. Contact Cloudinary 
 define(__NAMESPACE__ . '\CL_TRANSFORM_ERR', __('Failed to create the following named transformation: %s', 'cloudinary-images'));
 
 /**
-* Cloudinary image src url template
+* Cloudinary image constants
 *
 * @since 1.0.0
 */
@@ -63,4 +63,17 @@ const CL_SERVED = 'served_from_cloudinary';
 const CL_IMG_VERSION = 'cloudinary_image_version';
 const CL_IMG_PUB_ID = 'cloudinary_image_public_id';
 const CL_IMG_FORMAT = 'cloudinary_image_format';
+
+const CL_WP_CROP = [
+    'center-center' => 'g_center',
+    'center-bottom' => 'g_south',
+    'center-top' => 'g_north',
+    'left-center' => 'g_west',
+    'left-bottom' => 'g_south_west',
+    'left-top' => 'g_north_west',
+    'right-center' => 'g_east',
+    'right-top' => 'g_north_east',
+    'right-bottom' => 'g_south_east'
+];
+
 
