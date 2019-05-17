@@ -183,19 +183,18 @@ class Cloudinary_Images {
 
 		$this->loader->add_action('admin_init', $plugin_admin, 'options_update');
 
-		// check for/ setup transformatons when options are added or updated
 		$this->loader->add_action("update_option_cloudinary-images", $plugin_admin, 'update_transforms', 10, 3);
 		$this->loader->add_action("add_option_cloudinary-images", $plugin_admin, 'add_transforms', 10, 3);
 
-		// the custom media hooks
 		$this->loader->add_filter('manage_media_columns', $plugin_admin, 'add_cloudinary_column');
 		$this->loader->add_action('manage_media_custom_column', $plugin_admin, 'add_cloudinary_upload', 10, 2);
+		$this->loader->add_filter('image_get_intermediate_size', $plugin_admin, 'get_intermediate_size', 10, 3);
 
-		// uploading image and reregistering with wp
 		$this->loader->add_filter('load-upload.php', $plugin_admin, 'upload_to_cloudinary');
 
-		// hook into wp_get_attachment_image_src for fun and learning
-		$this->loader->add_filter('wp_get_attachment_image_src', $plugin_admin, 'get_cl_image_info', 10, 4);
+		// $this->loader->add_filter('wp_get_attachment_image_src', $plugin_admin, 'get_cl_image_info', 10, 4);
+		$this->loader->add_filter('wp_get_attachment_url', $plugin_admin, 'serve_cloudinary_url', 10, 2);
+		$this->loader->add_filter('image_downsize', $plugin_admin, 'preserve_cloudinary_url', 10, 3);
 	}
 
 	/**

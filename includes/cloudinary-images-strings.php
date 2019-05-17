@@ -27,11 +27,12 @@ define(
 );
 
 /**
-* Cloudinary upload link title
+* Cloudinary upload/download link title
 *
 * @since 1.0.0
 */
 define(__NAMESPACE__ . '\CL_UPLOAD_TITLE', __('Serve from Cloudinary', 'cloudinary-images'));
+define(__NAMESPACE__ . '\CL_REVERT_TITLE', __('Revert to Wordpress', 'cloudinary-images'));
 
 /**
 * Http status notification messages

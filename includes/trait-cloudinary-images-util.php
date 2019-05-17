@@ -14,6 +14,25 @@ namespace CloudinaryImages;
 
 trait Cloudinary_Images_Util {
     /**
+    * Obtain plugin options fully parsed into associative array
+    *
+    * @return array Associative array with parsed options
+    * @since 1.0.0
+    */
+    private function get_parsed_options() {
+        $options = get_option(PLUGIN_NAME);
+        if ($options) {
+            preg_match(CLOUDINARY_URL_REGEX, $options['url'], $matches);
+            $options['api_key_secret'] = $matches[1];
+            $options['api_key'] = $matches[2];
+            $options['api_secret'] = $matches[3];
+            $options['cloud_name'] = $matches[4];
+        }
+
+        return $options;
+    }
+
+    /**
     * Build cloudinary admin URL string
     *
     * Build and return the admin URL string for Cloudinary admin api either
@@ -27,10 +46,9 @@ trait Cloudinary_Images_Util {
     */
     private function cl_admin_url($key_secret = '', $name = '', $path = '') {
         if (empty($key_secret) || empty($name)) {
-            $options = get_option(PLUGIN_NAME);
-            preg_match(CLOUDINARY_URL_REGEX, $options['url'], $matches);
-            $key_secret = $matches[1];
-            $name = $matches[4];
+            $options = $this->get_parsed_options();
+            $key_secret = $options['api_key_secret'];
+            $name = $options['cloud_name'];
         }
 
         $url = sprintf(CLOUDINARY_ADMIN_URL, $key_secret, $name, $path);

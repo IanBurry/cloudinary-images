@@ -215,7 +215,7 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function add_cloudinary_column($columns) {
-		if (current_user_can('upload_files')) {
+		if (current_user_can('upload_files') && !empty(get_option(PLUGIN_NAME))) {
 			$columns['cloudinary-image'] = 'Cloudinary Image';
 		}
 
@@ -229,44 +229,60 @@ class Cloudinary_Images_Admin {
 	*/
 	public function add_cloudinary_upload($col_name, $media_id) {
 		if($col_name == 'cloudinary-image' && current_user_can('upload_files')) {
-			printf('<a href="?cloudinary_upload=%u">%s</a>', $media_id, CL_UPLOAD_TITLE);
+			$meta = wp_get_attachment_metadata($media_id);
+
+			if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] == true) {
+				print('<span class="dashicons dashicons-download"></span>');
+				printf('<a href="?cloudinary_upload=%u">%s</a>', $media_id, CL_REVERT_TITLE);
+			} else {
+				print('<span class="dashicons dashicons-upload"></span>');
+				printf('<a href="?cloudinary_upload=%u">%s</a>', $media_id, CL_UPLOAD_TITLE);
+			}
 		}
 	}
 
 	/**
-	* Upload image file to cloudinary from wp library
+	* Set served by cloudinary state, and upload image file if needed
 	*
-	* This will probably be off-loaded to a class cause it'll get messy here
-	* @todo Need to do some validations for file existence, permissions, etc.
+	* Uploads image file to cloudinary and sets served-by state to true, or
+	* toggles served-by state to false
 	*
 	* @since 1.0.0
 	*/
 	public function upload_to_cloudinary() {
-		add_action('admin_notices', [$this, 'error_notice']);
+		$this->get_parsed_options();
 		if (isset($_GET['cloudinary_upload']) && intval($_GET['cloudinary_upload']) > 0) {
+
+			// if already uploaded, revert to wordpress
+			$meta = wp_get_attachment_metadata($_GET['cloudinary_upload']);
+			if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] == true) {
+				$this->update_image($_GET['cloudinary_upload']);
+				// error_log('Reverting...');
+				$this->redirect_to_referer();
+			}
+
+			add_action('admin_notices', [$this, 'error_notice']);
 			$img_path = get_attached_file($_GET['cloudinary_upload']);
 
 			// now get the needed bits from options
-			$options = get_option($this->plugin_name);
-			preg_match(self::CLOUDINARY_URL_REGEX, $options['url'], $matches);
-			list($url, $key_sec, $api_key, $api_secret, $cloud_name) = $matches;
+			$options = $this->get_parsed_options();
 			$preset = $options['preset'];
 
 			// build cloudinary upload url
-			$upload_url = sprintf(self::CLOUDINARY_UPLOAD_URL, $cloud_name, 'image');
+			$upload_url = sprintf(self::CLOUDINARY_UPLOAD_URL, $options['cloud_name'], 'image');
 
 			// build siggy part of payload
 			$sig_params = ['timestamp' => time()];
 			if (!empty($preset)) {
 				$sig_params['upload_preset'] = $preset;
 			}
-			$sig = sha1(http_build_query($sig_params) . $api_secret);
+			$sig = sha1(http_build_query($sig_params) . $options['api_secret']);
 
 			// add api_key, file, and sig to sig_params
 			$file = curl_file_create($img_path);
 			$post_body = array_merge(
 				$sig_params,
-				['api_key' => $api_key, 'file' => $file, 'signature' => $sig]
+				['api_key' => $options['api_key'], 'file' => $file, 'signature' => $sig]
 			);
 
 			// Run it up the pipe
@@ -279,7 +295,7 @@ class Cloudinary_Images_Admin {
 			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
 
-			error_log(var_export($response, true));
+			// error_log(var_export($response, true));
 
 			// update image (attachment) info
 			if ($status === 200) {
@@ -287,9 +303,7 @@ class Cloudinary_Images_Admin {
 			}
 
 			// redirect back to library
-			$lib_url = wp_get_referer();
-			$location = add_query_arg(['status' => $status], $lib_url);
-			wp_redirect($location);
+			$this->redirect_to_referer(['status' => $status]);
 		}
 
 	}
@@ -342,7 +356,7 @@ class Cloudinary_Images_Admin {
 
 	/**
 	* Return cloudinary url if image is served from cloudinary
-	* @todo FINISH THIS!!!!
+	* @deprecated After all the work, this is the one that is no longer needed. shrug
 	*
 	* @param array 			$image 	   		Array of image data: url, width, height
 	* @param integer 		$attachment_id 	Integer image attachment ID
@@ -351,21 +365,119 @@ class Cloudinary_Images_Admin {
 	public function get_cl_image_info($image, $attachment_id, $size, $icon) {
 		if (is_string($size) && !empty($image)) {
 			$meta = wp_get_attachment_metadata($attachment_id);
-			// error_log(var_export($meta, true));
 			if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] === true) {
 				$image[0] = sprintf(
 					CL_IMAGE_SRC_URL,
-					'dipuqn6zk', // this will be in config at some point
-					/* sprintf('w_%u,h_%u', $image[1], $image[2]), */
+					$this->get_parsed_options()['cloud_name'],
 					$size === 'full' ? '' : "t_$size",
 					$meta[CL_IMG_VERSION],
 					$meta[CL_IMG_PUB_ID],
 					$meta[CL_IMG_FORMAT]
 				);
 			}
+		} else {
+			// error_log(var_export($size, true));
 		}
 
 		return empty($image) ? false : $image;
+	}
+
+	/**
+	* This returns the 'full' size cloudinary url
+	* @deprecated ?? This returns the 'full' url. It shows up in the REST response
+	* but does it actually get used?????
+	* @todo Experiment with disabling this
+	*/
+	public function serve_cloudinary_url($url, $media_id) {
+		$meta = wp_get_attachment_metadata($media_id);
+		if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] === true) {
+			$url = sprintf(
+				CL_IMAGE_SRC_URL,
+				$this->get_parsed_options()['cloud_name'],
+				'',
+				$meta[CL_IMG_VERSION],
+				$meta[CL_IMG_PUB_ID],
+				$meta[CL_IMG_FORMAT]
+			);
+			// error_log($url);
+		}
+
+		return $url;
+	}
+
+	/**
+	*
+	* @since 1.0.0
+	*/
+	public function get_intermediate_size($data, $media_id, $size) {
+		$meta = wp_get_attachment_metadata($media_id);
+
+		if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] ===  true) {
+			$sizes = $meta['sizes'];
+			$index = array_search($data['file'], array_column($sizes, 'file'));
+			$transform = array_keys($sizes)[$index];
+
+			$options = $this->get_parsed_options();
+			$data['url'] = sprintf(
+				CL_IMAGE_SRC_URL,
+				$options['cloud_name'],
+				"t_$transform",
+				$meta[CL_IMG_VERSION],
+				$meta[CL_IMG_PUB_ID],
+				$meta[CL_IMG_FORMAT]
+			);
+		}
+
+		return $data;
+	}
+
+	/**
+	* Hmmm, this may be it... but how?
+	* get urls that aren't named transformations? ..????
+	*
+	* Ok, this is a mess, but it's doing what it's sposed ta (I think)
+	*/
+	public function preserve_cloudinary_url($_, $media_id, $size) {
+		$meta = wp_get_attachment_metadata($media_id);
+		$intermediate = image_get_intermediate_size($media_id, $size);
+		$disp_width = $disp_height = '';
+
+		if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] === true) {
+			$options = $this->get_parsed_options();
+			if (is_string($size)) {
+				$url = sprintf(
+					CL_IMAGE_SRC_URL,
+					$options['cloud_name'],
+					$size === 'full' ? '' : "t_$size",
+					$meta[CL_IMG_VERSION],
+					$meta[CL_IMG_PUB_ID],
+					$meta[CL_IMG_FORMAT]
+				);
+				$disp_width = $meta['sizes'][$size]['width'];
+				$disp_height = $meta['sizes'][$size]['height'];
+
+			} elseif (is_array($size)) {
+				if ($intermediate !== false) {
+					$url = $intermediate['url'];
+					$disp_width = $intermediate['width'];
+					$disp_height = $intermediate['height'];
+				} else {
+					$url = sprintf(
+						CL_IMAGE_SRC_URL,
+						$options['cloud_name'],
+						'',
+						$meta[CL_IMG_VERSION],
+						$meta[CL_IMG_PUB_ID],
+						$meta[CL_IMG_FORMAT]
+					);
+				}
+
+			}
+
+			return [$url, $disp_width, $disp_height, true];
+		}
+
+		return false;
 	}
 
 	/**
@@ -406,7 +518,7 @@ class Cloudinary_Images_Admin {
 		$do_update = intval($old['last_updated']) !== intval($new['last_updated']);
 
 		if ($new['configured'] && $do_update) {
-			error_log("Updating transformations...");
+			// error_log("Updating transformations...");
 			$errors = Cloudinary_Images_Transformations::setup_transformations();
 			foreach ($errors as $error) {
 				add_settings_error(
@@ -428,27 +540,33 @@ class Cloudinary_Images_Admin {
 	* Add served-by-cloudinary flag and cloudinary path data to image meta-data
 	*
 	* @param integer 	$image_id 		Integer ID for uploaded image attachment
-	* @param array 		$cl_response 	Upload response data from cloudinary
+	* @param mixed 		$cl_response 	Optional. Upload response data from cloudinary, or false
 	* @return ? 0 or error code ?
 	*
-	* @todo Figure out return value and error handling for it
+	* @todo Figure out return value and error handling for it. RENAME!!!!
 	*
 	* @since 1.0.0
 	*/
-	private function update_image($image_id, $cl_response) {
+	private function update_image($image_id, $cl_response = false) {
 		$meta = wp_get_attachment_metadata($image_id, true);
 
-		$meta[CL_SERVED] = true;
-		$meta[CL_IMG_VERSION] = $cl_response['version'];
-		$meta[CL_IMG_PUB_ID] = $cl_response['public_id'];
-		$meta[CL_IMG_FORMAT] = $cl_response['format'];
+		if ($cl_response) {
+			$meta[CL_SERVED] = true;
+			$meta[CL_IMG_VERSION] = $cl_response['version'];
+			$meta[CL_IMG_PUB_ID] = $cl_response['public_id'];
+			$meta[CL_IMG_FORMAT] = $cl_response['format'];
+		} else {
+			$meta[CL_SERVED] = false;
+			$meta[CL_IMG_VERSION] = '';
+			$meta[CL_IMG_PUB_ID] = '';
+			$meta[CL_IMG_FORMAT] = '';
+		}
 
-		// update meta data
 		$result = wp_update_attachment_metadata($image_id, $meta);
 		if ($result === false) {
 			// do something to notify
-
 		}
+
 		// all done
 		return 0; // or some error code?
 	}
@@ -471,8 +589,24 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Setup cl_config array from options
+	* Redirect to wp_get_referer*
 	*
+	* Redirect to referer with optional extra query args. Exits script after
+	* redirecting
+	*
+	* @since 1.0.0
+	*/
+	private function redirect_to_referer(array $extra = []) {
+		$referer = wp_get_referer();
+		$location = add_query_arg($extra, $referer);
+
+		wp_redirect($location);
+		exit;
+	}
+
+	/**
+	* Setup cl_config array from options
+	* @deprecated
 	* @since 1.0.0
 	*/
 	private function setup_cl_config() {
