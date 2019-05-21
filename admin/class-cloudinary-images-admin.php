@@ -168,7 +168,6 @@ class Cloudinary_Images_Admin {
 	* @since 1.0.0
 	*/
 	public function process_settings($input) {
-		// error_log(var_export($input, true));
 		preg_match(CLOUDINARY_URL_REGEX, $input['url'], $match);
 		if (!empty($match)) {
 			$url_check = $this->cl_admin_url($match[1], end($match), 'resources');
@@ -257,7 +256,6 @@ class Cloudinary_Images_Admin {
 			$meta = wp_get_attachment_metadata($_GET['cloudinary_upload']);
 			if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] == true) {
 				$this->update_image($_GET['cloudinary_upload']);
-				// error_log('Reverting...');
 				$this->redirect_to_referer();
 			}
 
@@ -294,8 +292,6 @@ class Cloudinary_Images_Admin {
 			$response = json_decode(curl_exec($ch), true);
 			$status = intval(curl_getinfo($ch, CURLINFO_RESPONSE_CODE));
 			curl_close($ch);
-
-			// error_log(var_export($response, true));
 
 			// update image (attachment) info
 			if ($status === 200) {
@@ -356,7 +352,8 @@ class Cloudinary_Images_Admin {
 
 	/**
 	* Return cloudinary url if image is served from cloudinary
-	* @deprecated After all the work, this is the one that is no longer needed. shrug
+	*
+	* @deprecated Too early in url generation cycle
 	*
 	* @param array 			$image 	   		Array of image data: url, width, height
 	* @param integer 		$attachment_id 	Integer image attachment ID
@@ -375,20 +372,18 @@ class Cloudinary_Images_Admin {
 					$meta[CL_IMG_FORMAT]
 				);
 			}
-		} else {
-			// error_log(var_export($size, true));
 		}
 
 		return empty($image) ? false : $image;
 	}
 
 	/**
-	* This returns the 'full' size cloudinary url
-	* @deprecated ?? This returns the 'full' url. It shows up in the REST response
-	* but does it actually get used?????
+	* Constructs and returns Cloudinary source url
+	*
+	* @deprecated This may be unnecessary
 	* @todo Experiment with disabling this
 	*/
-	public function serve_cloudinary_url($url, $media_id) {
+	public function cloudinary_source_url($url, $media_id) {
 		$meta = wp_get_attachment_metadata($media_id);
 		if (isset($meta[CL_SERVED]) && $meta[CL_SERVED] === true) {
 			$url = sprintf(
@@ -399,14 +394,18 @@ class Cloudinary_Images_Admin {
 				$meta[CL_IMG_PUB_ID],
 				$meta[CL_IMG_FORMAT]
 			);
-			// error_log($url);
 		}
 
 		return $url;
 	}
 
 	/**
+	* Provides intermediate image size url for cloudinary served images
 	*
+	* @param array 			$data  		Image path, dimensions, url data
+	* @param integer 		$media_id  	Image record ID
+	* @param string/array 	$size 		Registered image size name or array of dimensions
+	* @return array 		Modified image path, dimensions, and url data
 	* @since 1.0.0
 	*/
 	public function get_intermediate_size($data, $media_id, $size) {
@@ -432,12 +431,18 @@ class Cloudinary_Images_Admin {
 	}
 
 	/**
-	* Hmmm, this may be it... but how?
-	* get urls that aren't named transformations? ..????
+	* Constructs and returns Cloudinary url for cloudinary served images
 	*
-	* Ok, this is a mess, but it's doing what it's sposed ta (I think)
+	* Provides Cloudinary urls for Wordpress registered sizes, and for
+	* custom sizes that can be associate
+	*
+	* @param boolean		$_ 			Unused
+	* @param integer 		$media_id	Image ID
+	* @param array/string 	$size 		Registered image name or dimensions array
+	* @return array 		URL, dimensions, is intermediate boolean
+	* @since 1.0.0
 	*/
-	public function preserve_cloudinary_url($_, $media_id, $size) {
+	public function serve_cloudinary_url($_, $media_id, $size) {
 		$meta = wp_get_attachment_metadata($media_id);
 		$intermediate = image_get_intermediate_size($media_id, $size);
 		$disp_width = $disp_height = '';
@@ -453,10 +458,13 @@ class Cloudinary_Images_Admin {
 					$meta[CL_IMG_PUB_ID],
 					$meta[CL_IMG_FORMAT]
 				);
-				$disp_width = $meta['sizes'][$size]['width'];
-				$disp_height = $meta['sizes'][$size]['height'];
 
-			} elseif (is_array($size)) {
+				if ($size != 'full') {
+					$disp_width = $meta['sizes'][$size]['width'];
+					$disp_height = $meta['sizes'][$size]['height'];
+				}
+
+			} else {
 				if ($intermediate !== false) {
 					$url = $intermediate['url'];
 					$disp_width = $intermediate['width'];
@@ -518,7 +526,6 @@ class Cloudinary_Images_Admin {
 		$do_update = intval($old['last_updated']) !== intval($new['last_updated']);
 
 		if ($new['configured'] && $do_update) {
-			// error_log("Updating transformations...");
 			$errors = Cloudinary_Images_Transformations::setup_transformations();
 			foreach ($errors as $error) {
 				add_settings_error(
@@ -584,7 +591,7 @@ class Cloudinary_Images_Admin {
 		if (is_array($response)) {
 			$is_valid = intval($response['headers']['status']) === 200;
 		}
-		if (WP_DEBUG_LOG) error_log($response['headers']['status']);
+
 		return $is_valid;
 	}
 

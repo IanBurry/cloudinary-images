@@ -192,9 +192,8 @@ class Cloudinary_Images {
 
 		$this->loader->add_filter('load-upload.php', $plugin_admin, 'upload_to_cloudinary');
 
-		// $this->loader->add_filter('wp_get_attachment_image_src', $plugin_admin, 'get_cl_image_info', 10, 4);
-		$this->loader->add_filter('wp_get_attachment_url', $plugin_admin, 'serve_cloudinary_url', 10, 2);
-		$this->loader->add_filter('image_downsize', $plugin_admin, 'preserve_cloudinary_url', 10, 3);
+		$this->loader->add_filter('wp_get_attachment_url', $plugin_admin, 'cloudinary_source_url', 10, 2);
+		$this->loader->add_filter('image_downsize', $plugin_admin, 'serve_cloudinary_url', 10, 3);
 	}
 
 	/**
