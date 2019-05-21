@@ -57,13 +57,6 @@ class Cloudinary_Images_Admin {
 	* @access private
 	* @var array $cl_config
 	*/
-	// private $cl_config = [
-	// 	'full_url' => '',
-	// 	'key_secret' => '',
-	// 	'api_key' => '',
-	// 	'secret' => '',
-	// 	'cloud_name' => ''
-	// ];
 
 	/**
 	* @todo Is this needed? Can we zap it?
@@ -78,11 +71,8 @@ class Cloudinary_Images_Admin {
 	 * @param      string    $version    The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
-
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-
-		// $this->setup_cl_config();
 	}
 
 	/**
@@ -118,7 +108,7 @@ class Cloudinary_Images_Admin {
 	/**
 	* Register admin menu
 	*
-	* @since 0.1.0
+	* @since 1.0.0
 	*/
 	public function add_plugin_admin_menu() {
 		add_options_page(

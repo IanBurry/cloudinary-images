@@ -1,92 +1,41 @@
-=== Plugin Name ===
-Contributors: (this should be a list of wordpress.org userid's)
-Donate link: https://author.example.com
-Tags: comments, spam
-Requires at least: 3.0.1
+=== Cloudinary-Images ===
+Contributors: Ian Burry
+Tags: images, cloudinary
+Requires at least: 4.7
 Requires PHP: 5.3+
-Tested up to: 3.4
-Stable tag: 4.3
+Tested up to: 4.9.8
+Stable tag: N/A
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Upload and serve images from Cloudinary. This is the short description. Not long at all
+Use Wordpress as offline CMS by serving images from Cloudinary.
 
 == Description ==
+The purpose of Cloudinary-Images is to let you use Wordpress as an "offline" CMS
+for statically generated websites, such as those that can be built using NuxtJS.
+Named transformations are created on Cloudinary for all Wordpress registered images
+types, and Cloudinary URLs are generated on the fly.
 
-This plugin allows images to be uploaded to and served from Cloudinary.
-- Upload individual images from media library. These, and any derived images, such as
-  'featured' images will then be served from Cloudinary.
-
-
+This is not a replacement for the official Cloudinary plugin [URL here], which is a more full
+integration of Cloudinary and Wordpress. CloudinaryImages simply serves the basic,
+registered Wordpress images from Cloudinary
 
 == Installation ==
+1. Download the zip file and uzip it in the Wordpress plugins directory (`/wp-content/plugins/`)
+2. Activate the plugin through the 'Plugins' menu in WordPress
 
-1. Upload `cloudinary-images.php` to the `/wp-content/plugins/` directory
-1. Activate the plugin through the 'Plugins' menu in WordPress
-1. Place `<?php do_action('plugin_name_hook'); ?>` in your templates
-
-== Frequently Asked Questions ==
-
-= A question that someone might have =
-
-An answer to that question.
-
-= What about foo bar? =
-
-Answer to foo bar dilemma.
-
-== Screenshots ==
-
-1. This screen shot description corresponds to screenshot-1.(png|jpg|jpeg|gif). Note that the screenshot is taken from
-the /assets directory or the directory that contains the stable readme.txt (tags or trunk). Screenshots in the /assets
-directory take precedence. For example, `/assets/screenshot-1.png` would win over `/tags/4.3/screenshot-1.png`
-(or jpg, jpeg, gif).
-2. This is the second screen shot
+== Setup and Usage ==
+1. Input the Cloudinary URL for your account (available on the Cloudinary Dashboard) into the
+text field provided
+2. Optionally, provide the name of an upload preset that you have defined in your
+Cloudinary account
+3. Click 'Save Changes.' Configuration will be validated and stored and named transformations
+corresponding to Wordpress registered image types will be created
+4. You can then upload and serve individual images from the media library
 
 == Changelog ==
+= 1.0.0-beta =
+* Initial release
 
-= 1.0 =
-* A change since the previous version.
-* Another change.
-
-= 0.5 =
-* List versions from most recent at top to oldest at bottom.
-
-== Upgrade Notice ==
-
-= 1.0 =
-Upgrade notices describe the reason a user should upgrade.  No more than 300 characters.
-
-= 0.5 =
-This version fixes a security related bug.  Upgrade immediately.
-
-== Arbitrary section ==
-
-You may provide arbitrary sections, in the same format as the ones above.  This may be of use for extremely complicated
-plugins where more information needs to be conveyed that doesn't fit into the categories of "description" or
-"installation."  Arbitrary sections will be shown below the built-in sections outlined above.
-
-== A brief Markdown Example ==
-
-Ordered list:
-
-1. Some feature
-1. Another feature
-1. Something else about the plugin
-
-Unordered list:
-
-* something
-* something else
-* third thing
-
-Here's a link to [WordPress](http://wordpress.org/ "Your favorite software") and one to [Markdown's Syntax Documentation][markdown syntax].
-Titles are optional, naturally.
-
-[markdown syntax]: http://daringfireball.net/projects/markdown/syntax
-            "Markdown is what the parser uses to process much of the readme file"
-
-Markdown uses email style notation for blockquotes and I've been told:
-> Asterisks for *emphasis*. Double it up  for **strong**.
-
-`<?php code(); // goes in backticks ?>`
+== TODO ==
+1. Implement bulk actions
