@@ -31,13 +31,6 @@ class Cloudinary_Images_Deactivator {
 	 * @since    1.0.0
      * @todo Remove the delete option code
 	 */
-	public static function deactivate() {
-        // if we are debugging...
-        error_log('Deactivating...');
-        if(WP_DEBUG) {
-            delete_option('cloudinary-images');
-        }
-
-	}
+	public static function deactivate() {}
 
 }
