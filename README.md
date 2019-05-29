@@ -16,14 +16,15 @@ registered Wordpress images from Cloudinary
 
 # Installation and Setup
 1. Download the zip file and unzip it in the Wordpress plugins directory (`/wp-content/plugins/`)
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to the settings page and input the Cloudinary URL for your account (available on the Cloudinary Dashboard) into the
+2. Adjust file permissions as needed. Directories should be: rwxrwxr-x (775) and files: rw-rw-r-- (664)
+3. Activate the plugin through the 'Plugins' menu in WordPress
+4. Navigate to the settings page and input the Cloudinary URL for your account (available on the Cloudinary Dashboard) into the
 text field provided
-4. Optionally, provide the name of an upload preset that you have defined in your
+5. Optionally, provide the name of an upload preset that you have defined in your
 Cloudinary account
-5. Click 'Save Changes.' Configuration will be validated and stored and named transformations
+6. Click 'Save Changes.' Configuration will be validated and stored and named transformations
 corresponding to Wordpress registered image types will be created
-6. You can then upload and serve individual images from the Wordpress media library
+7. You can then upload and serve individual images from the Wordpress media library
 
 # Notes and FAQ
 * **Stability:**
@@ -37,7 +38,7 @@ corresponding to Wordpress registered image types will be created
 
 * **Compatibility:**
 
-  Cloudinary-Images is compatible with the [Simple Image Sizes](https://wordpress.org/plugins/simple-image-sizes/) plugin (v3.2.1)
+  Cloudinary-Images is compatible with the [Simple Image Sizes](https://wordpress.org/plugins/simple-image-sizes/) plugin
 
 * **I have a lot of images, and don't want to upload them one at a time. Will there be a bulk upload option?**
 

@@ -8,7 +8,7 @@ Stable tag: N/A
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Use Wordpress as offline CMS by serving images from Cloudinary.
+Serve Wordpress registered images types from Cloudinary.
 
 == Description ==
 The purpose of Cloudinary-Images is to let you use Wordpress as an "offline" CMS

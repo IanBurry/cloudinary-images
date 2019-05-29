@@ -7,22 +7,38 @@
  * registers the activation and deactivation functions, and defines a function
  * that starts the plugin.
  *
- * @link              https://author.example.com
+ * @link              https://github.com/IanBurry/cloudinary-images
  * @since             1.0.0
  * @package           Cloudinary_Images
  *
  * @wordpress-plugin
  * Plugin Name:       Cloudinary Images
- * Plugin URI:        https://nowhere.example.com
+ * Plugin URI:        https://github.com/IanBurry/cloudinary-images
  * Description:       Upload and serve images from Cloudinary
  * Version:           1.0.0
  * Author:            Ian Burry
- * Author URI:        https://author.example.com
+ * Author URI:        https://github.com/IanBurry
  * Requires PHP:      5.3+
- * License:           GPL-2.0+
- * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       cloudinary-images
  * Domain Path:       /languages
+ * License:           GPL-2.0+
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ *
+ * Copyright 2019 Ian Burry (iburry@aol.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 namespace CloudinaryImages;
