@@ -33,5 +33,30 @@ if ( ! current_user_can('delete_plugins') ) {
     exit;
 }
 
+// remove any cloudinary_images image metadata
+global $wpdb;
+
+$sql = <<<SQL
+SELECT post_id, meta_value
+FROM wp_postmeta
+WHERE meta_key = '_wp_attachment_metadata'
+    AND meta_value LIKE '%served_from_cloudinary%'
+SQL;
+
+$result = $wpdb->get_results($sql, 'ARRAY_A');
+
+$cloudinary_keys = array_fill_keys([
+    'served_from_cloudinary',
+    'cloudinary_image_version',
+    'cloudinary_image_public_id',
+    'cloudinary_image_format'
+    ], '');
+
+foreach($result as $row) {
+    $meta = unserialize($row['meta_value']);
+    $clean_meta = array_diff_key($meta, $cloudinary_keys);
+    wp_update_attachment_metadata($row['post_id'], $clean_meta);
+}
+
 // Now delete plugin options
 delete_option('cloudinary-images');
