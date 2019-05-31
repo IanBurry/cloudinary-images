@@ -18,6 +18,9 @@
     <form action="options.php" method="POST" name="cl_images_options">
         <?php
             $options = get_option($this->plugin_name);
+            $update_transforms_display = 'block';
+            if (empty($options)) $update_transforms_display = 'none';
+
             $cloudinary_url = isset($options['url']) ? $options['url'] : '';
             $cloudinary_preset = isset($options['preset']) ? $options['preset'] : '';
             $do_transforms = isset($options['transforms']) ? $options['transforms'] : 0;
@@ -69,15 +72,17 @@
             <tr>
                 <th>&nbsp;</th>
                 <td>
-                    <input
-                        id="<?= $this->plugin_name ?>-transforms"
-                        name="<?= $this->plugin_name ?>[transforms]"
-                        type="checkbox"
-                        value="1"
-                        <?php echo $configured ? '' : 'checked' ?>>
-                    <label for="<?= $this->plugin_name ?>-transforms">
-                        <strong>Build/Update Transformations</strong>
-                    </label>
+                    <div style="display: <?= $update_transforms_display ?>">
+                        <input
+                            id="<?= $this->plugin_name ?>-transforms"
+                            name="<?= $this->plugin_name ?>[transforms]"
+                            type="checkbox"
+                            value="1"
+                            <?php echo $configured ? '' : 'checked' ?>>
+                        <label for="<?= $this->plugin_name ?>-transforms">
+                            <strong>Build/Update Transformations</strong>
+                        </label>
+                    </div>
                 </td>
             </tr>
         </table>
