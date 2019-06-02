@@ -1,14 +1,12 @@
 # Cloudinary-Images
 Serve Wordpress image media from [Cloudinary](https://cloudinary.com)
 
-The purpose of Cloudinary-Images is to let you use [Wordpress](https://wordpress.org)
-as an "offline" CMS for statically generated websites, such as those that can be built
-using [Nuxt.js](https://nuxtjs.org/). Named transformations are created on Cloudinary for
-all Wordpress registered images types, and Cloudinary URLs are generated on the fly.
+Upload and serve Wordpress registered image types from Cloudinary using named
+image transformations and an optional upload preset. Just setup with your Cloudinary
+URL and optional preset, and images can be uploaded from the media library
 
-This is not a replacement for the official [Cloudinary plugin](https://wordpress.org/plugins/cloudinary-image-management-and-manipulation-in-the-cloud-cdn/), which is a more full
-integration of Cloudinary and Wordpress. Cloudinary-Images simply serves the basic,
-registered Wordpress images from Cloudinary
+This is intended to be a simpler alternative to the official [Cloudinary plugin](https://wordpress.org/plugins/cloudinary-image-management-and-manipulation-in-the-cloud-cdn/), which is a more full
+integration of Cloudinary and Wordpress.
 
 # Requirements
 * Wordpress 4.7 or better. 4.9+ recommended
